@@ -3,23 +3,14 @@
 import React, { useState, useEffect } from 'react';
 
 // Import all components
-const LoginPage = React.lazy(() => import('./login-page'));
-const SignupPage = React.lazy(() => import('./signup-page'));
-const ForgotPasswordPage = React.lazy(() => import('./forgot-password-page'));
 const ProductListingPage = React.lazy(() => import('./product-listing-clean'));
 const ProductDetail = React.lazy(() => import('./product-detail'));
 const CartPage = React.lazy(() => import('./cart-page-new'));
 const CheckoutPage = React.lazy(() => import('./checkout-page'));
 const PaymentPage = React.lazy(() => import('./payment-page-fixed'));
 const OrderConfirmationPage = React.lazy(() => import('./order-confirmation-page-new'));
-const VendorDashboard = React.lazy(() => import('./vendor-dashboard'));
-const VendorProductManagement = React.lazy(() => import('./vendor-product-management'));
-const VendorOrders = React.lazy(() => import('./vendor-orders'));
-const SettingsApp = React.lazy(() => import('./settings-app'));
-const ReportsDashboard = React.lazy(() => import('./reports-dashboard'));
-const AuthenticatedHeader = React.lazy(() => import('./authenticated-header'));
 
-type UserRole = 'customer' | 'vendor' | 'admin';
+type UserRole = 'customer' | 'vendor' | 'admin' | 'vendor-customer';
 type AppPage = 
   | 'login' | 'signup' | 'forgot-password'
   | 'products' | 'product-detail' | 'cart' | 'checkout' | 'order-confirmation' | 'payment'
@@ -31,6 +22,7 @@ interface User {
   name: string;
   email: string;
   role: UserRole;
+  roles?: UserRole[]; // Support for multiple roles
   companyName?: string;
   gstin?: string;
 }
@@ -137,7 +129,7 @@ const RentalManagementSystem = ({ currentUser: propCurrentUser, onLogout }: Rent
     // Role-based redirect
     if (userData.role === 'admin') {
       setCurrentPage('reports');
-    } else if (userData.role === 'vendor') {
+    } else if (userData.role === 'vendor' || userData.role === 'vendor-customer') {
       setCurrentPage('vendor-dashboard');
     } else {
       setCurrentPage('products');
@@ -373,7 +365,8 @@ const RentalManagementSystem = ({ currentUser: propCurrentUser, onLogout }: Rent
 
   // Page components with proper props
   const renderPage = () => {
-    if (false) {
+    // Check if user is not authenticated and no prop user provided
+    if (!isAuthenticated && !propCurrentUser) {
       switch (currentPage) {
         case 'login':
           return (
@@ -451,6 +444,23 @@ const RentalManagementSystem = ({ currentUser: propCurrentUser, onLogout }: Rent
                     className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-full border border-white transition-colors"
                   >
                     Log In as Admin
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const mockVendorCustomer: User = {
+                        id: '4',
+                        name: 'Vendor & Customer',
+                        email: 'vendorcustomer@example.com',
+                        role: 'vendor-customer',
+                        roles: ['vendor', 'customer'],
+                        companyName: 'Dual Role Company'
+                      };
+                      handleLogin(mockVendorCustomer);
+                    }}
+                    className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full border border-white transition-colors"
+                  >
+                    Log In as Vendor & Customer
                   </button>
 
                   <div className="mt-6 space-y-2 text-center">
@@ -599,6 +609,8 @@ const RentalManagementSystem = ({ currentUser: propCurrentUser, onLogout }: Rent
             currentUser={currentUser}
           />
         ) : <ProductListingPage addToCart={addProductToCart} navigateTo={navigateTo} cartItems={cartItems} currentUser={currentUser} onLogout={handleLogout} />;
+
+      case 'cart':
         return <CartPage cartItems={cartItems} removeFromCart={removeFromCart} navigateTo={navigateTo} createOrder={createOrder} currentUser={currentUser} updateCartItem={updateCartItem} />;
 
       case 'checkout':
@@ -611,171 +623,421 @@ const RentalManagementSystem = ({ currentUser: propCurrentUser, onLogout }: Rent
         return selectedOrder ? (
           <OrderConfirmationPage order={selectedOrder} navigateTo={navigateTo} currentUser={currentUser} />
         ) : <ProductListingPage addToCart={addProductToCart} navigateTo={navigateTo} cartItems={cartItems} currentUser={currentUser} onLogout={handleLogout} />;
-        return (
-          <HeaderWithNav>
-            <div className="p-8">
-              <div className="max-w-2xl mx-auto">
-                <h1 className="text-3xl font-bold text-white mb-8 text-center">Payment</h1>
-                {selectedOrder && (
-                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                    <h2 className="text-xl font-bold text-white mb-4">Payment Details</h2>
-                    <div className="mb-6">
-                      <p className="text-gray-400 mb-2">Order Total: <span className="text-pink-400 font-bold">₹{selectedOrder.total}</span></p>
-                    </div>
-                    <div className="space-y-4 mb-6">
-                      <div>
-                        <label className="block text-sm text-gray-300 mb-2">Payment Method</label>
-                        <select className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
-                          <option>Credit Card</option>
-                          <option>Debit Card</option>
-                          <option>UPI</option>
-                          <option>Net Banking</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-300 mb-2">Card Number</label>
-                        <input
-                          type="text"
-                          placeholder="1234 5678 9012 3456"
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm text-gray-300 mb-2">Expiry Date</label>
-                          <input
-                            type="text"
-                            placeholder="MM/YY"
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-gray-300 mb-2">CVV</label>
-                          <input
-                            type="text"
-                            placeholder="123"
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        updateOrderStatus(selectedOrder.id, 'confirmed');
-                        clearCart();
-                        alert('Payment successful! Order confirmed.');
-                        navigateTo('products');
-                      }}
-                      className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-6 rounded-full border border-white transition-colors"
-                    >
-                      Pay ₹{selectedOrder.total}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </HeaderWithNav>
-        );
 
       case 'vendor-dashboard':
         return (
-          <HeaderWithNav>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white mb-8">Vendor Dashboard</h1>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">Total Revenue</h3>
-                  <p className="text-3xl font-bold text-green-400">₹1,25,000</p>
-                  <p className="text-gray-400 text-sm">This month</p>
+          <div className="min-h-screen bg-black text-white">
+            {/* Header Bar */}
+            <header className="fixed top-0 left-0 right-0 bg-black border-b border-white z-10">
+              <div className="flex items-center justify-between px-8 py-4">
+                {/* Left: Logo and Navigation */}
+                <div className="flex items-center space-x-8">
+                  <div className="text-xl font-bold text-white">Your Logo</div>
+                  <nav className="flex space-x-8">
+                    <button
+                      onClick={() => navigateTo('vendor-dashboard')}
+                      className="text-white font-medium border-b-2 border-white pb-1"
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => navigateTo('vendor-products')}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      Products
+                    </button>
+                    <button
+                      onClick={() => navigateTo('vendor-orders')}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      Orders
+                    </button>
+                    <button
+                      onClick={() => navigateTo('reports')}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      Reports
+                    </button>
+                  </nav>
                 </div>
-                <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">Active Rentals</h3>
-                  <p className="text-3xl font-bold text-blue-400">24</p>
-                  <p className="text-gray-400 text-sm">Currently rented</p>
-                </div>
-                <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">Pending Returns</h3>
-                  <p className="text-3xl font-bold text-orange-400">8</p>
-                  <p className="text-gray-400 text-sm">Due for return</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Recent Orders</h3>
-                  <div className="space-y-3">
-                    {orders.slice(0, 5).map(order => (
-                      <div key={order.id} className="flex justify-between items-center py-2 border-b border-gray-700">
-                        <div>
-                          <p className="text-white font-medium">{order.id}</p>
-                          <p className="text-gray-400 text-sm">{order.createdAt.split('T')[0]}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-green-400 font-medium">₹{order.total}</p>
-                          <p className="text-gray-400 text-sm capitalize">{order.status}</p>
-                        </div>
-                      </div>
-                    ))}
+
+                {/* Center: Search Bar */}
+                <div className="flex-1 max-w-md mx-16">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search products, orders, customers..."
+                      className="w-full bg-black border border-white rounded-full py-2 px-6 pr-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                    />
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-                <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Top Products</h3>
-                  <div className="space-y-3">
-                    {['Professional Camera 1', 'Professional Camera 2', 'Professional Camera 3'].map((product, index) => (
-                      <div key={product} className="flex justify-between items-center py-2 border-b border-gray-700">
-                        <div>
-                          <p className="text-white font-medium">{product}</p>
-                          <p className="text-gray-400 text-sm">{15 - index * 3} rentals</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-green-400 font-medium">₹{(25000 - index * 5000).toLocaleString()}</p>
-                          <p className="text-gray-400 text-sm">Revenue</p>
-                        </div>
-                      </div>
-                    ))}
+
+                {/* Right: Icons */}
+                <div className="flex items-center space-x-6">
+                  {/* Notification Bell */}
+                  <button className="p-2">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zm-9-10a5 5 0 1110 0v3.5a5 5 0 01-1.5 3.5l-1.5 1.5v1.5a1 1 0 01-1 1H8a1 1 0 01-1-1v-1.5l-1.5-1.5A5 5 0 014 10.5V7z" />
+                    </svg>
+                  </button>
+                  
+                  {/* Help Icon */}
+                  <button className="p-2">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                  
+                  {/* User Avatar */}
+                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-sm font-semibold text-white border border-white">
+                    {currentUser?.name?.charAt(0) || 'V'}
                   </div>
                 </div>
               </div>
-            </div>
-          </HeaderWithNav>
+            </header>
+
+            {/* Main Content */}
+            <main className="pt-20 pb-8 px-8">
+              {/* Page Title */}
+              <div className="text-center mb-12">
+                <h1 className="text-4xl font-bold text-white">Vendor Dashboard</h1>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
+                {/* Total Rentals Card */}
+                <div className="bg-black border border-white rounded-lg p-8 text-center transform hover:scale-105 transition-transform duration-200">
+                  <div className="mb-4">
+                    <p className="text-5xl font-bold text-white mb-2">156</p>
+                    <p className="text-gray-400 text-lg">Total Rentals</p>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    +12% this month
+                  </div>
+                </div>
+
+                {/* Active Rentals Card */}
+                <div className="bg-black border border-white rounded-lg p-8 text-center transform hover:scale-105 transition-transform duration-200">
+                  <div className="mb-4">
+                    <p className="text-5xl font-bold text-blue-400 mb-2">24</p>
+                    <p className="text-gray-400 text-lg">Active Rentals</p>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Currently ongoing
+                  </div>
+                </div>
+
+                {/* Total Earnings Card */}
+                <div className="bg-black border border-white rounded-lg p-8 text-center transform hover:scale-105 transition-transform duration-200">
+                  <div className="mb-4">
+                    <p className="text-5xl font-bold text-green-400 mb-2">₹2.4L</p>
+                    <p className="text-gray-400 text-lg">Total Earnings</p>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Last 30 days
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Wide Card */}
+              <div className="max-w-7xl mx-auto bg-black border border-white rounded-lg p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                  
+                  {/* Left Section: Recent Rental Orders */}
+                  <div className="lg:col-span-2">
+                    <h2 className="text-2xl font-bold text-white mb-6">Recent Rental Orders</h2>
+                    
+                    {/* Table Header */}
+                    <div className="grid grid-cols-4 gap-6 mb-4 pb-3 border-b border-white">
+                      <div className="text-gray-400 font-medium">Order ID</div>
+                      <div className="text-gray-400 font-medium">Product</div>
+                      <div className="text-gray-400 font-medium">Status</div>
+                      <div className="text-gray-400 font-medium">Rental Period</div>
+                    </div>
+
+                    {/* Table Rows */}
+                    <div className="space-y-0">
+                      <div className="grid grid-cols-4 gap-6 py-4 border-b border-white">
+                        <div className="text-white font-medium">ORD-001</div>
+                        <div className="text-white">Professional Camera</div>
+                        <div>
+                          <span className="px-3 py-1 text-xs rounded-full font-medium bg-green-600 text-white">
+                            Confirmed
+                          </span>
+                        </div>
+                        <div className="text-gray-400">3 days</div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-6 py-4 border-b border-white">
+                        <div className="text-white font-medium">ORD-002</div>
+                        <div className="text-white">Lighting Kit</div>
+                        <div>
+                          <span className="px-3 py-1 text-xs rounded-full font-medium bg-yellow-600 text-white">
+                            With Customer
+                          </span>
+                        </div>
+                        <div className="text-gray-400">7 days</div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-6 py-4">
+                        <div className="text-white font-medium">ORD-003</div>
+                        <div className="text-white">Drone Equipment</div>
+                        <div>
+                          <span className="px-3 py-1 text-xs rounded-full font-medium bg-gray-600 text-white">
+                            Returned
+                          </span>
+                        </div>
+                        <div className="text-gray-400">2 days</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Section: Quick Insights */}
+                  <div className="lg:col-span-1">
+                    <h2 className="text-2xl font-bold text-white mb-6">Quick Insights</h2>
+                    
+                    <div className="space-y-6">
+                      <div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-white rounded-full mt-3 flex-shrink-0"></div>
+                          <div>
+                            <p className="text-gray-400 text-sm">Most Rented Product</p>
+                            <p className="text-white font-medium">Professional Camera</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-white rounded-full mt-3 flex-shrink-0"></div>
+                          <div>
+                            <p className="text-gray-400 text-sm">Upcoming Returns</p>
+                            <p className="text-white font-medium">8 orders due today</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-white rounded-full mt-3 flex-shrink-0"></div>
+                          <div>
+                            <p className="text-gray-400 text-sm">Late Returns Count</p>
+                            <p className="text-red-400 font-medium">3 overdue</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
         );
 
       case 'vendor-products':
         return (
-          <HeaderWithNav>
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-white">Product Management</h1>
-                <button className="bg-pink-600 hover:bg-pink-700 text-white font-medium py-2 px-6 rounded-full border border-white transition-colors">
-                  Add New Product
-                </button>
+          <div className="min-h-screen bg-black text-white">
+            {/* Header Bar */}
+            <header className="fixed top-0 left-0 right-0 bg-black border-b border-white z-10">
+              <div className="flex items-center justify-between px-8 py-4">
+                {/* Left: Logo and Navigation */}
+                <div className="flex items-center space-x-8">
+                  <div className="text-xl font-bold text-white">Your Logo</div>
+                  <nav className="flex space-x-8">
+                    <button
+                      onClick={() => navigateTo('vendor-dashboard')}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => navigateTo('vendor-products')}
+                      className="text-white font-medium border-b-2 border-white pb-1"
+                    >
+                      Products
+                    </button>
+                    <button
+                      onClick={() => navigateTo('vendor-orders')}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      Orders
+                    </button>
+                    <button
+                      onClick={() => navigateTo('reports')}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      Reports
+                    </button>
+                  </nav>
+                </div>
+
+                {/* Center: Search Bar */}
+                <div className="flex-1 max-w-md mx-16">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search products, orders, customers..."
+                      className="w-full bg-black border border-white rounded-full py-2 px-6 pr-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                    />
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Icons */}
+                <div className="flex items-center space-x-6">
+                  {/* Notification Bell */}
+                  <button className="p-2">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zm-9-10a5 5 0 1110 0v3.5a5 5 0 01-1.5 3.5l-1.5 1.5v1.5a1 1 0 01-1 1H8a1 1 0 01-1-1v-1.5l-1.5-1.5A5 5 0 014 10.5V7z" />
+                    </svg>
+                  </button>
+                  
+                  {/* Help Icon */}
+                  <button className="p-2">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                  
+                  {/* User Avatar */}
+                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-sm font-semibold text-white border border-white">
+                    {currentUser?.name?.charAt(0) || 'V'}
+                  </div>
+                </div>
               </div>
-              <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                <div className="space-y-4">
-                  {[1, 2, 3, 4, 5].map(id => (
-                    <div key={id} className="flex items-center justify-between py-4 border-b border-gray-700 last:border-b-0">
+            </header>
+
+            {/* Main Content */}
+            <main className="pt-20 pb-8 px-8">
+              {/* Page Title */}
+              <div className="text-center mb-12">
+                <h1 className="text-4xl font-bold text-white">My Rental Products</h1>
+              </div>
+
+              {/* Main Card */}
+              <div className="max-w-7xl mx-auto bg-black border border-white rounded-lg p-8">
+                {/* Add Product Button */}
+                <div className="flex justify-end mb-8">
+                  <button className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-full transition-colors">
+                    Add Product
+                  </button>
+                </div>
+
+                {/* Product Table */}
+                <div className="w-full">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-6 gap-6 mb-6 pb-4 border-b border-white">
+                    <div className="text-gray-400 font-medium">Product</div>
+                    <div className="text-gray-400 font-medium">Rentable</div>
+                    <div className="text-gray-400 font-medium">Quantity Available</div>
+                    <div className="text-gray-400 font-medium">Rental Price</div>
+                    <div className="text-gray-400 font-medium">Status</div>
+                    <div className="text-gray-400 font-medium">Actions</div>
+                  </div>
+
+                  {/* Product Rows */}
+                  <div className="space-y-0">
+                    {/* Product 1 */}
+                    <div className="grid grid-cols-6 gap-6 py-6 border-b border-white">
                       <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
+                        <div className="w-12 h-12 bg-gray-700 border border-gray-600 rounded flex items-center justify-center">
                           <span className="text-gray-400 text-xs">IMG</span>
                         </div>
-                        <div>
-                          <h3 className="text-white font-medium">Professional Camera {id}</h3>
-                          <p className="text-gray-400 text-sm">₹500/day • Available: 5 units</p>
-                        </div>
+                        <span className="text-white font-medium">Professional Camera Kit</span>
+                      </div>
+                      <div>
+                        <span className="px-3 py-1 text-xs rounded-full font-medium bg-black border border-white text-green-400">
+                          Yes
+                        </span>
+                      </div>
+                      <div className="text-white">5 units</div>
+                      <div className="text-white">₹500 / Day</div>
+                      <div>
+                        <span className="px-3 py-1 text-xs rounded-full font-medium bg-black border border-white text-green-400">
+                          Published
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded border border-white transition-colors">
+                        <button className="px-3 py-1 text-xs rounded-full font-medium bg-transparent border border-white text-white hover:bg-white hover:text-black transition-colors">
                           Edit
                         </button>
-                        <button className="bg-red-600 hover:bg-red-700 text-white text-sm py-1 px-3 rounded border border-white transition-colors">
-                          Delete
+                        <button className="px-3 py-1 text-xs rounded-full font-medium bg-transparent border border-white text-white hover:bg-white hover:text-black transition-colors">
+                          Unpublish
                         </button>
                       </div>
                     </div>
-                  ))}
+
+                    {/* Product 2 */}
+                    <div className="grid grid-cols-6 gap-6 py-6 border-b border-white">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gray-700 border border-gray-600 rounded flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">IMG</span>
+                        </div>
+                        <span className="text-white font-medium">Drone Equipment Set</span>
+                      </div>
+                      <div>
+                        <span className="px-3 py-1 text-xs rounded-full font-medium bg-black border border-white text-green-400">
+                          Yes
+                        </span>
+                      </div>
+                      <div className="text-white">3 units</div>
+                      <div className="text-white">₹800 / Day</div>
+                      <div>
+                        <span className="px-3 py-1 text-xs rounded-full font-medium bg-black border border-white text-gray-400">
+                          Unpublished
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button className="px-3 py-1 text-xs rounded-full font-medium bg-transparent border border-white text-white hover:bg-white hover:text-black transition-colors">
+                          Edit
+                        </button>
+                        <button className="px-3 py-1 text-xs rounded-full font-medium bg-transparent border border-white text-white hover:bg-white hover:text-black transition-colors">
+                          Publish
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Product 3 */}
+                    <div className="grid grid-cols-6 gap-6 py-6">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gray-700 border border-gray-600 rounded flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">IMG</span>
+                        </div>
+                        <span className="text-white font-medium">Studio Lighting Kit</span>
+                      </div>
+                      <div>
+                        <span className="px-3 py-1 text-xs rounded-full font-medium bg-black border border-white text-red-400">
+                          No
+                        </span>
+                      </div>
+                      <div className="text-white">0 units</div>
+                      <div className="text-white">₹300 / Day</div>
+                      <div>
+                        <span className="px-3 py-1 text-xs rounded-full font-medium bg-black border border-white text-green-400">
+                          Published
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button className="px-3 py-1 text-xs rounded-full font-medium bg-transparent border border-white text-white hover:bg-white hover:text-black transition-colors">
+                          Edit
+                        </button>
+                        <button className="px-3 py-1 text-xs rounded-full font-medium bg-transparent border border-white text-white hover:bg-white hover:text-black transition-colors">
+                          Unpublish
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </HeaderWithNav>
+            </main>
+          </div>
         );
 
       case 'vendor-orders':

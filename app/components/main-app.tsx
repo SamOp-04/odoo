@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import LoginPage from './auth-login';
-import VendorDashboard from './vendor-dashboard-new';
 import AdminDashboard from './admin-dashboard';
 
 // Lazy load the customer rental system
@@ -17,8 +17,15 @@ interface User {
 
 const MainApp = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const router = useRouter();
 
   const handleLogin = (user: User) => {
+    // Redirect vendors to the new vendor portal immediately
+    if (user.role === 'vendor') {
+      router.push('/vendor/dashboard');
+      return;
+    }
+    
     setCurrentUser(user);
   };
 
@@ -48,9 +55,6 @@ const MainApp = () => {
           <RentalManagementSystem currentUser={currentUser} onLogout={handleLogout} />
         </Suspense>
       );
-      
-    case 'vendor':
-      return <VendorDashboard currentUser={currentUser} onLogout={handleLogout} />;
       
     case 'admin':
       return <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />;
