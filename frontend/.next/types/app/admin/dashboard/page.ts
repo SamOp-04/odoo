@@ -1,4 +1,4 @@
-// File: C:\Users\samas\odoo\frontend\app\admin\dashboard\page.tsx
+// File: C:\Mobile App Projects\College Projects\MAD\odoo\frontend\app\admin\dashboard\page.tsx
 import * as entry from '../../../../../app/admin/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

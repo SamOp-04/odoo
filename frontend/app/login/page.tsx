@@ -53,7 +53,9 @@ export default function LoginPage() {
           case 'vendor':
             router.push('/vendor/dashboard');
             break;
-          case 'user':
+           case 'user':
+             router.push('/product-listing-clean');
+            break;
           default:
             router.push('/');
             break;
