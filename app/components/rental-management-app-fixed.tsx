@@ -4,9 +4,29 @@ import React, { useState } from 'react';
 import CartQuotationPage from './cart-quotation-page';
 import VariantsDialog from './variants-dialog';
 
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  rentalPeriod: string;
+  startDate: string;
+  endDate: string;
+  image?: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 const RentalManagementApp = () => {
   const [currentPage, setCurrentPage] = useState<'products' | 'cart'>('products');
   const [isVariantsDialogOpen, setIsVariantsDialogOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [currentUser] = useState<User | null>({ id: '1', name: 'Test User', email: 'test@example.com', role: 'customer' });
 
   const openVariantsDialog = () => {
     setIsVariantsDialogOpen(true);
@@ -20,8 +40,33 @@ const RentalManagementApp = () => {
     setCurrentPage('cart');
   };
 
+  const navigateTo = (page: 'products' | 'cart') => {
+    setCurrentPage(page);
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCartItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const createOrder = (orderData: any) => {
+    return {
+      ...orderData,
+      id: Math.random().toString(36).substr(2, 9),
+      status: 'confirmed',
+      createdAt: new Date().toISOString()
+    };
+  };
+
   if (currentPage === 'cart') {
-    return <CartQuotationPage />;
+    return (
+      <CartQuotationPage 
+        cartItems={cartItems}
+        removeFromCart={removeFromCart}
+        navigateTo={navigateTo}
+        createOrder={createOrder}
+        currentUser={currentUser}
+      />
+    );
   }
 
   return (

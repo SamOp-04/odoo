@@ -1,9 +1,9 @@
-import RentalManagementSystem from './components/rental-management-system';
+import MainApp from './components/main-app';
 
 export default function Home() {
   return (
     <main>
-      <RentalManagementSystem />
+      <MainApp />
     </main>
   );
 }

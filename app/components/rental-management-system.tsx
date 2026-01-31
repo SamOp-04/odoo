@@ -6,10 +6,12 @@ import React, { useState, useEffect } from 'react';
 const LoginPage = React.lazy(() => import('./login-page'));
 const SignupPage = React.lazy(() => import('./signup-page'));
 const ForgotPasswordPage = React.lazy(() => import('./forgot-password-page'));
-const ProductListingPage = React.lazy(() => import('./product-listing-page'));
-const CartQuotationPage = React.lazy(() => import('./cart-quotation-page'));
-const OrderConfirmationPage = React.lazy(() => import('./order-confirmation-page'));
-const PaymentPage = React.lazy(() => import('./payment-page'));
+const ProductListingPage = React.lazy(() => import('./product-listing-clean'));
+const ProductDetail = React.lazy(() => import('./product-detail'));
+const CartPage = React.lazy(() => import('./cart-page-new'));
+const CheckoutPage = React.lazy(() => import('./checkout-page'));
+const PaymentPage = React.lazy(() => import('./payment-page-fixed'));
+const OrderConfirmationPage = React.lazy(() => import('./order-confirmation-page-new'));
 const VendorDashboard = React.lazy(() => import('./vendor-dashboard'));
 const VendorProductManagement = React.lazy(() => import('./vendor-product-management'));
 const VendorOrders = React.lazy(() => import('./vendor-orders'));
@@ -20,7 +22,7 @@ const AuthenticatedHeader = React.lazy(() => import('./authenticated-header'));
 type UserRole = 'customer' | 'vendor' | 'admin';
 type AppPage = 
   | 'login' | 'signup' | 'forgot-password'
-  | 'products' | 'cart' | 'order-confirmation' | 'payment'
+  | 'products' | 'product-detail' | 'cart' | 'checkout' | 'order-confirmation' | 'payment'
   | 'vendor-dashboard' | 'vendor-products' | 'vendor-orders'
   | 'settings' | 'reports' | 'profile';
 
@@ -52,13 +54,21 @@ interface Order {
   createdAt: string;
   customerId: string;
   vendorId: string;
+  orderNumber?: string;
+  paymentMethod?: string;
+  customerName?: string;
 }
 
-const RentalManagementSystem = () => {
+interface RentalManagementSystemProps {
+  currentUser?: User | null;
+  onLogout?: () => void;
+}
+
+const RentalManagementSystem = ({ currentUser: propCurrentUser, onLogout }: RentalManagementSystemProps = {}) => {
   // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentPage, setCurrentPage] = useState<AppPage>('login');
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(propCurrentUser || null);
+  const [currentPage, setCurrentPage] = useState<AppPage>('products');
   const [isLoading, setIsLoading] = useState(true);
 
   // Application State
@@ -66,27 +76,28 @@ const RentalManagementSystem = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [quotationData, setQuotationData] = useState<Order | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   // Initialize app
   useEffect(() => {
     const checkAuthStatus = () => {
-      const userData = localStorage.getItem('currentUser');
-      const authStatus = localStorage.getItem('isAuthenticated');
-      
-      if (userData && authStatus === 'true') {
-        setCurrentUser(JSON.parse(userData));
+      // If user is provided as prop, skip authentication
+      if (propCurrentUser) {
+        setCurrentUser(propCurrentUser);
         setIsAuthenticated(true);
-        // Redirect based on role
-        const user = JSON.parse(userData);
-        if (user.role === 'admin') {
-          setCurrentPage('reports');
-        } else if (user.role === 'vendor') {
-          setCurrentPage('vendor-dashboard');
-        } else {
-          setCurrentPage('products');
-        }
+        setCurrentPage('products');
       } else {
-        setCurrentPage('login');
+        // Check localStorage for saved auth
+        const savedUser = localStorage.getItem('currentUser');
+        const savedAuth = localStorage.getItem('isAuthenticated');
+        
+        if (savedUser && savedAuth === 'true') {
+          setCurrentUser(JSON.parse(savedUser));
+          setIsAuthenticated(true);
+          setCurrentPage('products');
+        } else {
+          setCurrentPage('login');
+        }
       }
       setIsLoading(false);
     };
@@ -140,7 +151,13 @@ const RentalManagementSystem = () => {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('cartItems');
-    setCurrentPage('login');
+    
+    // Call parent logout if provided
+    if (onLogout) {
+      onLogout();
+    } else {
+      setCurrentPage('login');
+    }
   };
 
   // Navigation handlers
@@ -151,6 +168,8 @@ const RentalManagementSystem = () => {
         setQuotationData(data);
       } else if (page === 'payment') {
         setSelectedOrder(data);
+      } else if (page === 'product-detail') {
+        setSelectedProduct(data);
       }
     }
   };
@@ -169,6 +188,21 @@ const RentalManagementSystem = () => {
         return [...prev, item];
       }
     });
+  };
+
+  // Helper function to convert Product to CartItem
+  const addProductToCart = (product: any, quantity: number = 1, rentalPeriod: string = 'day', startDate: string = '', endDate: string = '') => {
+    const cartItem: CartItem = {
+      id: product.id.toString(),
+      name: product.name,
+      price: product.price,
+      quantity,
+      rentalPeriod,
+      startDate,
+      endDate,
+      image: product.image
+    };
+    addToCart(cartItem);
   };
 
   const removeFromCart = (itemId: string) => {
@@ -339,7 +373,7 @@ const RentalManagementSystem = () => {
 
   // Page components with proper props
   const renderPage = () => {
-    if (!isAuthenticated) {
+    if (false) {
       switch (currentPage) {
         case 'login':
           return (
@@ -553,161 +587,30 @@ const RentalManagementSystem = () => {
     // Authenticated pages
     switch (currentPage) {
       case 'products':
-        return (
-          <HeaderWithNav>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white mb-8">Rental Products</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Mock products */}
-                {[1, 2, 3, 4, 5, 6].map(id => (
-                  <div key={id} className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                    <div className="w-full h-48 bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
-                      <span className="text-gray-400">Product Image</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Professional Camera {id}</h3>
-                    <p className="text-gray-400 mb-4">High-quality camera for professional photography</p>
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-pink-400 font-bold">₹500/day</span>
-                      <span className="text-green-400">Available</span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const item: CartItem = {
-                          id: `product-${id}`,
-                          name: `Professional Camera ${id}`,
-                          price: 500,
-                          quantity: 1,
-                          rentalPeriod: 'daily',
-                          startDate: new Date().toISOString().split('T')[0],
-                          endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                        };
-                        addToCart(item);
-                      }}
-                      className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-2 px-4 rounded-full border border-white transition-colors"
-                    >
-                      Add to Cart
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </HeaderWithNav>
-        );
+        return <ProductListingPage addToCart={addProductToCart} navigateTo={navigateTo} cartItems={cartItems} currentUser={currentUser} onLogout={handleLogout} />;
 
-      case 'cart':
-        return (
-          <HeaderWithNav>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white mb-8">Rental Cart</h1>
-              {cartItems.length === 0 ? (
-                <div className="text-center py-16">
-                  <p className="text-gray-400 mb-4">Your cart is empty</p>
-                  <button
-                    onClick={() => navigateTo('products')}
-                    className="bg-pink-600 hover:bg-pink-700 text-white font-medium py-2 px-6 rounded-full border border-white transition-colors"
-                  >
-                    Browse Products
-                  </button>
-                </div>
-              ) : (
-                <div className="max-w-4xl mx-auto">
-                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                    {cartItems.map(item => (
-                      <div key={item.id} className="flex items-center justify-between py-4 border-b border-gray-700 last:border-b-0">
-                        <div className="flex-1">
-                          <h3 className="text-white font-medium">{item.name}</h3>
-                          <p className="text-gray-400 text-sm">{item.startDate} to {item.endDate}</p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <span className="text-gray-300">Qty: {item.quantity}</span>
-                          <span className="text-pink-400 font-bold">₹{item.price * item.quantity}</span>
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-red-400 hover:text-red-300"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="mt-6 flex justify-between items-center">
-                      <div className="text-xl font-bold text-white">
-                        Total: ₹{cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)}
-                      </div>
-                      <button
-                        onClick={() => {
-                          const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                          const orderData = {
-                            items: cartItems,
-                            total,
-                            status: 'draft' as const,
-                            createdAt: new Date().toISOString(),
-                            customerId: currentUser?.id || '',
-                            vendorId: 'vendor-1'
-                          };
-                          const newOrder = createOrder(orderData);
-                          navigateTo('order-confirmation', newOrder);
-                        }}
-                        className="bg-pink-600 hover:bg-pink-700 text-white font-medium py-2 px-6 rounded-full border border-white transition-colors"
-                      >
-                        Confirm Order
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </HeaderWithNav>
-        );
+      case 'product-detail':
+        return selectedProduct ? (
+          <ProductDetail 
+            product={selectedProduct}
+            addToCart={addToCart} 
+            navigateTo={navigateTo} 
+            cartItems={cartItems}
+            currentUser={currentUser}
+          />
+        ) : <ProductListingPage addToCart={addProductToCart} navigateTo={navigateTo} cartItems={cartItems} currentUser={currentUser} onLogout={handleLogout} />;
+        return <CartPage cartItems={cartItems} removeFromCart={removeFromCart} navigateTo={navigateTo} createOrder={createOrder} currentUser={currentUser} updateCartItem={updateCartItem} />;
 
-      case 'order-confirmation':
-        return (
-          <HeaderWithNav>
-            <div className="p-8">
-              <div className="max-w-2xl mx-auto">
-                <h1 className="text-3xl font-bold text-white mb-8 text-center">Order Confirmed!</h1>
-                {quotationData && (
-                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-6">
-                    <h2 className="text-xl font-bold text-white mb-4">Order Details</h2>
-                    <p className="text-gray-400 mb-4">Order ID: {quotationData.id}</p>
-                    <div className="space-y-2 mb-6">
-                      {quotationData.items?.map(item => (
-                        <div key={item.id} className="flex justify-between">
-                          <span className="text-gray-300">{item.name} (x{item.quantity})</span>
-                          <span className="text-white">₹{item.price * item.quantity}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="border-t border-gray-600 pt-4 mb-6">
-                      <div className="flex justify-between text-xl font-bold">
-                        <span className="text-white">Total:</span>
-                        <span className="text-pink-400">₹{quotationData.total}</span>
-                      </div>
-                    </div>
-                    <div className="flex space-x-4">
-                      <button
-                        onClick={() => {
-                          navigateTo('payment', quotationData);
-                        }}
-                        className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-6 rounded-full border border-white transition-colors"
-                      >
-                        Proceed to Payment
-                      </button>
-                      <button
-                        onClick={() => navigateTo('products')}
-                        className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-medium py-3 px-6 rounded-full border border-gray-500 transition-colors"
-                      >
-                        Continue Shopping
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </HeaderWithNav>
-        );
+      case 'checkout':
+        return <CheckoutPage cartItems={cartItems} navigateTo={navigateTo} currentUser={currentUser} />;
 
       case 'payment':
+        return <PaymentPage cartItems={cartItems} navigateTo={navigateTo} createOrder={createOrder} currentUser={currentUser} deliveryData={selectedOrder} />;
+
+      case 'order-confirmation':
+        return selectedOrder ? (
+          <OrderConfirmationPage order={selectedOrder} navigateTo={navigateTo} currentUser={currentUser} />
+        ) : <ProductListingPage addToCart={addProductToCart} navigateTo={navigateTo} cartItems={cartItems} currentUser={currentUser} onLogout={handleLogout} />;
         return (
           <HeaderWithNav>
             <div className="p-8">
