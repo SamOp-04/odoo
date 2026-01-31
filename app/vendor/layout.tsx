@@ -72,7 +72,7 @@ export default function VendorLayout({ children }: VendorLayoutProps) {
                   className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-900 transition-colors"
                   onClick={() => {
                     setProfileOpen(false);
-                    router.push('/');
+                    router.push('/login');
                   }}
                 >
                   Logout
