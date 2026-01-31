@@ -20,7 +20,10 @@ const rentalOrderSchema = new mongoose.Schema({
     rental_start_date: Date,
     rental_end_date: Date,
     unit_price: Number,
-    subtotal: Number
+    subtotal: Number,
+    // Product image snapshot at time of order
+    product_image: String, // Main product image URL
+    product_images: [String] // All product images at time of order
   }],
   
   total_amount: Number,
@@ -37,7 +40,16 @@ const rentalOrderSchema = new mongoose.Schema({
   actual_return_date: Date,
   late_fee: { type: Number, default: 0 },
   
+  // Pickup/return documentation images
+  pickup_images: [String], // Images taken during pickup
+  return_images: [String], // Images taken during return
+  
   notes: String
 }, { timestamps: true });
+
+// Index for faster queries
+rentalOrderSchema.index({ customer_id: 1, status: 1 });
+rentalOrderSchema.index({ vendor_id: 1, status: 1 });
+rentalOrderSchema.index({ order_number: 1 });
 
 module.exports = mongoose.model('RentalOrder', rentalOrderSchema);

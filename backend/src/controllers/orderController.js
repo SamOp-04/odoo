@@ -5,6 +5,7 @@ const PickupDocument = require('../models/PickupDocument');
 const ReturnDocument = require('../models/ReturnDocument');
 const { calculateLateFee } = require('../services/pricing');
 const { createNotification } = require('../services/notification');
+const { uploadMultipleImages, deleteMultipleImages } = require('../services/s3');
 
 const getOrders = async (req, res) => {
   try {
@@ -68,6 +69,19 @@ const markAsPickedUp = async (req, res) => {
       return res.status(400).json({ error: 'Order must be confirmed first' });
     }
     
+    // Handle pickup images if provided
+    let pickupImageUrls = [];
+    if (req.files && req.files.length > 0) {
+      const images = req.files.map(file => ({
+        buffer: file.buffer,
+        fileName: file.originalname,
+        mimeType: file.mimetype
+      }));
+      
+      pickupImageUrls = await uploadMultipleImages(images);
+      order.pickup_images = pickupImageUrls;
+    }
+    
     order.status = 'with_customer';
     order.pickup_date = new Date();
     await order.save();
@@ -112,6 +126,19 @@ const markAsReturned = async (req, res) => {
     
     if (order.status !== 'with_customer') {
       throw new Error('Order not with customer');
+    }
+    
+    // Handle return images if provided
+    let returnImageUrls = [];
+    if (req.files && req.files.length > 0) {
+      const images = req.files.map(file => ({
+        buffer: file.buffer,
+        fileName: file.originalname,
+        mimeType: file.mimetype
+      }));
+      
+      returnImageUrls = await uploadMultipleImages(images);
+      order.return_images = returnImageUrls;
     }
     
     const lateFee = calculateLateFee(order, { late_fee_per_day: 100 });
@@ -195,10 +222,92 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+/**
+ * Upload additional pickup images to an order
+ */
+const uploadPickupImages = async (req, res) => {
+  try {
+    const order = await RentalOrder.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    if (order.vendor_id.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No images provided' });
+    }
+    
+    const images = req.files.map(file => ({
+      buffer: file.buffer,
+      fileName: file.originalname,
+      mimeType: file.mimetype
+    }));
+    
+    const imageUrls = await uploadMultipleImages(images);
+    
+    order.pickup_images = [...(order.pickup_images || []), ...imageUrls];
+    await order.save();
+    
+    res.json({
+      message: 'Pickup images uploaded successfully',
+      images: imageUrls,
+      order
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Upload additional return images to an order
+ */
+const uploadReturnImages = async (req, res) => {
+  try {
+    const order = await RentalOrder.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    if (order.vendor_id.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No images provided' });
+    }
+    
+    const images = req.files.map(file => ({
+      buffer: file.buffer,
+      fileName: file.originalname,
+      mimeType: file.mimetype
+    }));
+    
+    const imageUrls = await uploadMultipleImages(images);
+    
+    order.return_images = [...(order.return_images || []), ...imageUrls];
+    await order.save();
+    
+    res.json({
+      message: 'Return images uploaded successfully',
+      images: imageUrls,
+      order
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
   markAsPickedUp,
   markAsReturned,
-  cancelOrder
+  cancelOrder,
+  uploadPickupImages,
+  uploadReturnImages
 };

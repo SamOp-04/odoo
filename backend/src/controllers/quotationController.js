@@ -176,22 +176,31 @@ const confirmQuotation = async (req, res) => {
     
     const vendorId = quotation.lines[0].product_id.vendor_id;
     
+    // Create order with product images snapshot
+    const orderLines = quotation.lines.map(line => {
+      const product = line.product_id;
+      return {
+        product_id: product._id,
+        product_name: product.name,
+        variant_id: line.variant_id,
+        quantity: line.quantity,
+        rental_start_date: line.rental_start_date,
+        rental_end_date: line.rental_end_date,
+        unit_price: line.unit_price,
+        subtotal: line.subtotal,
+        // Capture product images at time of order
+        product_image: product.images && product.images.length > 0 ? product.images[0] : null,
+        product_images: product.images || []
+      };
+    });
+    
     const order = await RentalOrder.create([{
       quotation_id: req.params.id,
       customer_id: quotation.customer_id,
       vendor_id: vendorId,
       order_number: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       status: 'confirmed',
-      lines: quotation.lines.map(line => ({
-        product_id: line.product_id._id,
-        product_name: line.product_id.name,
-        variant_id: line.variant_id,
-        quantity: line.quantity,
-        rental_start_date: line.rental_start_date,
-        rental_end_date: line.rental_end_date,
-        unit_price: line.unit_price,
-        subtotal: line.subtotal
-      })),
+      lines: orderLines,
       total_amount: quotation.total_amount,
       deposit_paid: 0,
       full_payment_made: false,
