@@ -1,9 +1,9 @@
-import VendorApp from './components/vendor-app';
+import RentalManagementSystem from './components/rental-management-system';
 
 export default function Home() {
   return (
     <main>
-      <VendorApp />
+      <RentalManagementSystem />
     </main>
   );
 }
