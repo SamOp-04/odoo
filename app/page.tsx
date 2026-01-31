@@ -1,9 +1,9 @@
-import RentalManagementApp from './components/rental-management-app-fixed';
+import VendorApp from './components/vendor-app';
 
 export default function Home() {
   return (
     <main>
-      <RentalManagementApp />
+      <VendorApp />
     </main>
   );
 }
