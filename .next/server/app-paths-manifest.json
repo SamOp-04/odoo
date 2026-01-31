@@ -1,10 +1,4 @@
 {
-  "/page": "app/page.js",
-  "/vendor/products/new/page": "app/vendor/products/new/page.js",
-  "/vendor/reports/page": "app/vendor/reports/page.js",
-  "/vendor/profile/page": "app/vendor/profile/page.js",
-  "/vendor/orders/page": "app/vendor/orders/page.js",
-  "/vendor/settings/page": "app/vendor/settings/page.js",
-  "/vendor/products/page": "app/vendor/products/page.js",
-  "/vendor/dashboard/page": "app/vendor/dashboard/page.js"
+  "/not-found": "app/not-found.js",
+  "/page": "app/page.js"
 }

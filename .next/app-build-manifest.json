@@ -1,65 +1,20 @@
 {
   "pages": {
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/vendor/layout": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/vendor/layout.js"
+      "static/chunks/app/page.js"
     ],
-    "/vendor/dashboard/page": [
+    "/not-found": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/vendor/dashboard/page.js"
-    ],
-    "/vendor/products/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/products/page.js"
-    ],
-    "/vendor/products/new/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/products/new/page.js"
-    ],
-    "/vendor/products/[productId]/edit/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/products/[productId]/edit/page.js"
-    ],
-    "/vendor/reports/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/reports/page.js"
-    ],
-    "/vendor/orders/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/orders/page.js"
-    ],
-    "/vendor/profile/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/profile/page.js"
-    ],
-    "/vendor/settings/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/settings/page.js"
-    ],
-    "/vendor/notifications/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/vendor/notifications/page.js"
+      "static/chunks/app/not-found.js"
     ]
   }
 }

@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import LoginPage from './auth-login';
-import AdminDashboard from './admin-dashboard';
+import AdminMain from './admin/admin-main';
 
 // Lazy load the customer rental system
 const RentalManagementSystem = React.lazy(() => import('./rental-management-system'));
@@ -57,7 +57,7 @@ const MainApp = () => {
       );
       
     case 'admin':
-      return <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />;
+      return <AdminMain currentUser={currentUser} onLogout={handleLogout} />;
       
     default:
       return <LoginPage onLogin={handleLogin} />;
