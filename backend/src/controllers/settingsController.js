@@ -28,22 +28,27 @@ const updateSettings = async (req, res) => {
 
 const getAttributes = async (req, res) => {
   try {
+    console.log('📋 Fetching product attributes...');
     const attributes = await ProductAttribute.find();
+    console.log(`✓ Found ${attributes.length} attributes:`, attributes);
     res.json(attributes);
   } catch (error) {
+    console.error('❌ Error fetching attributes:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
 const createAttribute = async (req, res) => {
   try {
+    console.log('📝 Creating attribute with data:', req.body);
     const attribute = await ProductAttribute.create(req.body);
+    console.log('✓ Attribute created:', attribute);
     res.status(201).json(attribute);
   } catch (error) {
+    console.error('❌ Error creating attribute:', error);
     res.status(500).json({ error: error.message });
   }
 };
-
 const updateAttribute = async (req, res) => {
   try {
     const attribute = await ProductAttribute.findByIdAndUpdate(
