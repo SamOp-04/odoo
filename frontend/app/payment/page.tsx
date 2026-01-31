@@ -70,17 +70,6 @@ export default function PaymentRoute() {
     }
   };
 
-  // Logout function
-  const onLogout = () => {
-    if (confirm('Are you sure you want to logout?')) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('cart');
-      }
-      router.push('/login');
-    }
-  };
-
   return (
     <PaymentPage
       cartItems={cartItems}
