@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRazorpay } from '@/lib/hooks/useRazorpay';
+import { toast } from 'react-hot-toast';
 
 interface Invoice {
   _id: string;
   invoice_number: string;
   total_amount: number;
+  amount_paid: number;
+  amount_due: number;
   status: string;
   createdAt: string;
+  order_id: string;
 }
 
 export default function CustomerInvoicesPage() {
@@ -15,6 +20,8 @@ export default function CustomerInvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  const { initiatePayment, loading: paymentLoading } = useRazorpay();
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -76,9 +83,48 @@ export default function CustomerInvoicesPage() {
 
       window.open(pdf_url, '_blank');
     } catch (err: any) {
-      alert(err.message || 'Download failed');
+      toast.error(err.message || 'Download failed');
     } finally {
       setDownloading(null);
+    }
+  };
+
+  /* ------------------ */
+  /* PAY INVOICE */
+  /* ------------------ */
+  const handlePayInvoice = async (invoice: Invoice) => {
+    setPayingInvoice(invoice._id);
+    try {
+      await initiatePayment({
+        amount: invoice.amount_due,
+        invoiceId: invoice._id,
+        orderId: invoice.order_id,
+        onSuccess: async (paymentDetails) => {
+          toast.success('Payment successful!');
+          // Refresh invoices list
+          const token = localStorage.getItem('token');
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/invoices`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setInvoices(data);
+          }
+          setPayingInvoice(null);
+        },
+        onError: (error) => {
+          console.error('Payment error:', error);
+          setPayingInvoice(null);
+        }
+      });
+    } catch (err: any) {
+      toast.error(err.message || 'Payment failed');
+      setPayingInvoice(null);
     }
   };
 
@@ -101,6 +147,8 @@ export default function CustomerInvoicesPage() {
               <th className="py-2">Invoice</th>
               <th>Status</th>
               <th>Total</th>
+              <th>Paid</th>
+              <th>Due</th>
               <th>Date</th>
               <th className="text-right">Action</th>
             </tr>
@@ -122,10 +170,27 @@ export default function CustomerInvoicesPage() {
                 </td>
 
                 <td>
+                  ₹{invoice.amount_paid.toLocaleString()}
+                </td>
+
+                <td>
+                  ₹{invoice.amount_due.toLocaleString()}
+                </td>
+
+                <td>
                   {new Date(invoice.createdAt).toLocaleDateString()}
                 </td>
 
-                <td className="text-right">
+                <td className="text-right space-x-2">
+                  {invoice.status !== 'paid' && invoice.amount_due > 0 && (
+                    <button
+                      onClick={() => handlePayInvoice(invoice)}
+                      disabled={payingInvoice === invoice._id || paymentLoading}
+                      className="rounded bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs disabled:opacity-50"
+                    >
+                      {payingInvoice === invoice._id ? 'Processing...' : 'Pay Now'}
+                    </button>
+                  )}
                   <button
                     onClick={() => downloadInvoice(invoice._id)}
                     disabled={downloading === invoice._id}

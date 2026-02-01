@@ -9,9 +9,11 @@ import Button from '@/components/ui/Button';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useCartStore } from '@/store/cart/cartStore';
 import { useRequireAuth } from '@/lib/hooks/useAuth';
+import { useRazorpay } from '@/lib/hooks/useRazorpay';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Trash2, ShoppingBag, Plus, Minus, Clock } from 'lucide-react';
 import Image from 'next/image';
+import { toast } from 'react-hot-toast';
 
 // Helper function to ensure image URLs are properly formatted
 const getImageUrl = (url: string | undefined): string => {
@@ -24,13 +26,81 @@ const getImageUrl = (url: string | undefined): string => {
 export default function CartPage() {
   useRequireAuth();
   const router = useRouter();
-  const { items, removeItem, getTotalAmount, getTotalDeposit, clearCart } = useCartStore();
+  const { items, removeItem, getTotalAmount, getTotalDeposit, clearCart, quotationId } = useCartStore();
+  const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const [couponCode, setCouponCode] = useState('');
   const [showExpressCheckout, setShowExpressCheckout] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const totalAmount = getTotalAmount();
   const totalDeposit = getTotalDeposit();
   const deliveryCharges = 0; // Free delivery as per design
+
+  const handleExpressCheckout = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to place order');
+        router.push('/auth/login');
+        return;
+      }
+
+      if (!quotationId) {
+        toast.error('No quotation found. Please add items to cart.');
+        return;
+      }
+
+      // First confirm the quotation to create the order
+      const confirmRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/quotations/${quotationId}/confirm`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            delivery_method: 'standard',
+            delivery_address: 'Express Checkout Address',
+            payment_method: 'razorpay',
+          }),
+        }
+      );
+
+      if (!confirmRes.ok) {
+        const errorData = await confirmRes.json();
+        throw new Error(errorData.error || 'Failed to confirm order');
+      }
+
+      const result = await confirmRes.json();
+      const order = result.order;
+      
+      sessionStorage.setItem('lastOrderNumber', order.order_number);
+      sessionStorage.setItem('lastOrderId', order._id);
+
+      // Close modal and initiate Razorpay payment
+      setShowExpressCheckout(false);
+      
+      await initiatePayment({
+        amount: totalAmount + totalDeposit,
+        orderId: order._id,
+        onSuccess: (paymentDetails) => {
+          clearCart();
+          toast.success('Order placed successfully!');
+          router.push('/customer/orders');
+        },
+        onError: (error) => {
+          console.error('Payment error:', error);
+          setLoading(false);
+        }
+      });
+    } catch (error: any) {
+      console.error('Error confirming order:', error);
+      toast.error(error.message || 'Failed to place order. Please try again.');
+      setLoading(false);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -324,8 +394,8 @@ export default function CartPage() {
                 </div>
 
                 <div className="pt-4">
-                  <Button fullWidth size="lg">
-                    Pay Now
+                  <Button fullWidth size="lg" onClick={handleExpressCheckout} disabled={loading || paymentLoading}>
+                    {loading || paymentLoading ? 'Processing...' : 'Pay Now'}
                   </Button>
                 </div>
               </div>

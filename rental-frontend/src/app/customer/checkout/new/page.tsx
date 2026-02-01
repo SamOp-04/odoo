@@ -9,9 +9,11 @@ import Button from '@/components/ui/Button';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useCartStore } from '@/store/cart/cartStore';
 import { useRequireAuth } from '@/lib/hooks/useAuth';
+import { useRazorpay } from '@/lib/hooks/useRazorpay';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { ShoppingBag, ChevronLeft, Edit2 } from 'lucide-react';
 import Image from 'next/image';
+import { toast } from 'react-hot-toast';
 
 // Helper function to ensure image URLs are properly formatted
 const getImageUrl = (url: string | undefined): string => {
@@ -27,6 +29,7 @@ export default function CheckoutPage() {
   useRequireAuth();
   const router = useRouter();
   const { items, getTotalAmount, getTotalDeposit, clearCart, quotationId } = useCartStore();
+  const { initiatePayment, loading: paymentLoading } = useRazorpay();
 
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('delivery');
   const [deliveryMethod, setDeliveryMethod] = useState<'standard' | 'pickup'>('standard');
@@ -67,22 +70,22 @@ export default function CheckoutPage() {
     if (currentStep === 'delivery') {
       setCurrentStep('payment');
     } else if (currentStep === 'payment') {
-      // Process payment and confirm quotation
+      // Process payment with Razorpay and confirm quotation
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          alert('Please login to place order');
+          toast.error('Please login to place order');
           router.push('/auth/login');
           return;
         }
 
         if (!quotationId) {
-          alert('No quotation found. Please add items to cart.');
+          toast.error('No quotation found. Please add items to cart.');
           return;
         }
 
-        // Confirm the quotation (this will create the order)
+        // First confirm the quotation to create the order
         const confirmRes = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/quotations/${quotationId}/confirm`,
           {
@@ -94,7 +97,7 @@ export default function CheckoutPage() {
             body: JSON.stringify({
               delivery_method: deliveryMethod,
               delivery_address: formData.address || 'Customer Address',
-              payment_method: 'card',
+              payment_method: 'razorpay',
             }),
           }
         );
@@ -107,19 +110,28 @@ export default function CheckoutPage() {
         const result = await confirmRes.json();
         const order = result.order;
         
-        // Store order details
         setCreatedOrderId(order._id);
         sessionStorage.setItem('lastOrderNumber', order.order_number);
         sessionStorage.setItem('lastOrderId', order._id);
 
-        // Clear cart after successful order
-        clearCart();
-        
-        setCurrentStep('confirmation');
+        // Now initiate Razorpay payment
+        await initiatePayment({
+          amount: totalAmount + totalDeposit,
+          orderId: order._id,
+          onSuccess: (paymentDetails) => {
+            // Clear cart after successful payment
+            clearCart();
+            setCurrentStep('confirmation');
+          },
+          onError: (error) => {
+            console.error('Payment error:', error);
+            toast.error('Payment failed. Please try again.');
+            setLoading(false);
+          }
+        });
       } catch (error: any) {
         console.error('Error confirming order:', error);
-        alert(error.message || 'Failed to place order. Please try again.');
-      } finally {
+        toast.error(error.message || 'Failed to place order. Please try again.');
         setLoading(false);
       }
     }
@@ -366,8 +378,8 @@ export default function CheckoutPage() {
       </Card>
 
       <div className="flex flex-col gap-3">
-        <Button fullWidth size="lg" onClick={handleConfirm} disabled={loading}>
-          {loading ? 'Processing Payment...' : 'Pay Now'}
+        <Button fullWidth size="lg" onClick={handleConfirm} disabled={loading || paymentLoading}>
+          {loading || paymentLoading ? 'Processing Payment...' : 'Pay Now'}
         </Button>
         <div className="text-center">
           <span className="text-foreground-secondary">OR</span>
