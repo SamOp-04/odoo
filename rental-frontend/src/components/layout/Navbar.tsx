@@ -19,6 +19,9 @@ const Navbar: React.FC = () => {
   const { getItemCount } = useCartStore();
   const cartCount = mounted ? getItemCount() : 0;
 
+  // Check if we're on vendor or admin dashboard
+  const isVendorOrAdminDashboard = pathname?.startsWith('/vendor/') || pathname?.startsWith('/admin/');
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
@@ -47,46 +50,52 @@ const Navbar: React.FC = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? 'text-primary'
-                    : 'text-foreground-secondary hover:text-foreground'
-                }`}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
+          {!isVendorOrAdminDashboard && (
+            <div className="hidden md:flex items-center space-x-8">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`text-sm font-medium transition-colors ${
+                    pathname === item.href
+                      ? 'text-primary'
+                      : 'text-foreground-secondary hover:text-foreground'
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                {/* Cart */}
-                <button
-                  onClick={() => router.push('/customer/cart')}
-                  className="relative p-2 text-foreground-secondary hover:text-foreground transition-colors"
-                >
-                  <ShoppingCart size={20} />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
+                {/* Cart - Only show for non-vendor/admin pages */}
+                {!isVendorOrAdminDashboard && (
+                  <button
+                    onClick={() => router.push('/customer/cart')}
+                    className="relative p-2 text-foreground-secondary hover:text-foreground transition-colors"
+                  >
+                    <ShoppingCart size={20} />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    )}
+                  </button>
+                )}
 
                 {/* Notifications */}
-                <button
-                  onClick={() => router.push('/notifications')}
-                  className="p-2 text-foreground-secondary hover:text-foreground transition-colors"
-                >
-                  <Bell size={20} />
-                </button>
+                {!isVendorOrAdminDashboard && (
+                  <button
+                    onClick={() => router.push('/notifications')}
+                    className="p-2 text-foreground-secondary hover:text-foreground transition-colors"
+                  >
+                    <Bell size={20} />
+                  </button>
+                )}
 
                 {/* User Menu */}
                 <div className="relative group">
@@ -160,7 +169,7 @@ const Navbar: React.FC = () => {
         {/* Mobile menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-foreground-secondary/10">
-            {navigation.map((item) => (
+            {!isVendorOrAdminDashboard && navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}

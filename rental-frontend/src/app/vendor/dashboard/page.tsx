@@ -76,15 +76,6 @@ export default function VendorDashboardPage() {
           </div>
         )}
 
-        {/* Debug Info in Development */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-6 p-4 bg-info/10 border border-info/20 rounded-lg text-info text-sm">
-            <p><strong>User:</strong> {user?.email}</p>
-            <p><strong>Role:</strong> {user?.role}</p>
-            <p><strong>Stats Loaded:</strong> {stats ? 'Yes' : 'No'}</p>
-          </div>
-        )}
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>

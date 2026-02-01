@@ -5,21 +5,44 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Heart, ShoppingCart, User, Menu } from 'lucide-react';
+import { Search, Heart, ShoppingCart, User, Menu, Bell } from 'lucide-react';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useCartStore } from '@/store/cart/cartStore';
 
 const CustomerNavbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { getItemCount } = useCartStore();
   const cartCount = mounted ? getItemCount() : 0;
 
-  useEffect(() => {
+  React.useEffect(() => {
     setMounted(true);
+    fetchNotificationCount();
   }, []);
+
+  const fetchNotificationCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const unreadCount = data.filter((n: any) => !n.is_read).length;
+        setNotificationCount(unreadCount);
+      }
+    } catch (err) {
+      console.error('Error fetching notification count:', err);
+    }
+  };
 
   const navigation = [
     { name: 'Products', href: '/customer/products' },
@@ -103,6 +126,20 @@ const CustomerNavbar: React.FC = () => {
               <Heart size={20} />
             </Link>
 
+            {/* Notifications */}
+            <Link
+              href="/customer/notifications"
+              className="relative p-2 text-foreground-secondary hover:text-foreground transition-colors"
+              title="Notifications"
+            >
+              <Bell size={20} />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
+            </Link>
+
             {/* Cart with Badge */}
             <Link
               href="/customer/cart"
@@ -140,6 +177,17 @@ const CustomerNavbar: React.FC = () => {
                   className="block px-4 py-2 text-sm text-foreground hover:bg-background-tertiary"
                 >
                   My Orders
+                </Link>
+                <Link
+                  href="/customer/notifications"
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-background-tertiary"
+                >
+                  Notifications
+                  {notificationCount > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                      {notificationCount}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/customer/dashboard"

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Home, Building2, Package, ShoppingBag, BarChart3, LogOut, User } from 'lucide-react';
+import { Home, Building2, Package, ShoppingBag, BarChart3, LogOut, User, Users, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/auth/authStore';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +36,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingBag },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
+    { name: 'Attributes', href: '/admin/attributes', icon: Settings },
+    { name: 'All Users', href: '/admin/all-users', icon: Users },
+    { name: 'Profile', href: '/admin/profile', icon: User },
   ];
 
   return (
