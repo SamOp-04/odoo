@@ -1,17 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: [
-      'localhost',
-      // Add your S3 bucket domain here
-      'rental-management-invoices.s3.ap-south-1.amazonaws.com',
-    ],
     remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
       {
         protocol: 'https',
         hostname: '**.amazonaws.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'rental-management-invoices.s3.ap-south-1.amazonaws.com',
+      },
     ],
+    unoptimized: process.env.NODE_ENV === 'development',
   },
   experimental: {
     serverActions: {

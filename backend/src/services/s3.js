@@ -56,18 +56,22 @@ async function uploadImageToS3(imageBuffer, fileName, mimeType) {
     Bucket: BUCKET_NAME,
     Key: key,
     Body: imageBuffer,
-    ContentType: mimeType,
-    ACL: 'public-read' // Make images publicly readable
+    ContentType: mimeType
   };
   
   try {
     const command = new PutObjectCommand(uploadParams);
     await s3Client.send(command);
     
-    // Return public URL instead of presigned URL for images
-    const publicUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    // Generate a presigned URL with maximum expiration (7 days - AWS limit)
+    const getCommand = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key
+    });
     
-    return publicUrl;
+    const presignedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 604800 }); // 7 days (max allowed)
+    
+    return presignedUrl;
   } catch (error) {
     console.error('S3 image upload error:', error);
     throw error;

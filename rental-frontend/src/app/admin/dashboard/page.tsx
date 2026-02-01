@@ -43,7 +43,7 @@ export default function AdminDashboardPage() {
         }
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/admin`,
+          `${process.env.NEXT_PUBLIC_API_URL}/dashboard/admin`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

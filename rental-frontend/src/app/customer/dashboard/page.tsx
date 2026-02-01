@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CustomerDashboardLayout from '@/components/layout/CustomerDashboardLayout';
 
 interface Order {
   _id: string;
@@ -76,11 +77,12 @@ export default function CustomerDashboardPage() {
   if (!data) return null;
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
+    <CustomerDashboardLayout>
+      <div className="space-y-8">
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* STATS */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           title="Total Orders"
           value={data.totalOrders}
@@ -190,7 +192,8 @@ export default function CustomerDashboardPage() {
           </table>
         </div>
       </section>
-    </div>
+      </div>
+    </CustomerDashboardLayout>
   );
 }
 

@@ -7,6 +7,11 @@ const getProducts = async (req, res) => {
     const { category, is_published } = req.query;
     const filter = {};
     
+    // If user is a vendor, only show their products
+    if (req.user && req.user.role === 'vendor') {
+      filter.vendor_id = req.user.id;
+    }
+    
     if (category) filter.category = category;
     if (is_published !== undefined) filter.is_published = is_published === 'true';
     

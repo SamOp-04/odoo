@@ -44,9 +44,26 @@ export const useAuthStore = create<AuthState>()(
         // IMPORTANT: Save to cookies for middleware to read
         document.cookie = `token=${token}; path=/; max-age=2592000; SameSite=Lax`;
 
+        // Convert authUser to full User object for compatibility
+        const fullUser: User = {
+          _id: authUser.id,
+          name: authUser.name,
+          email: authUser.email,
+          role: authUser.role,
+          company_name: (authUser as any).company_name,
+          gstin: '', // Will be loaded via fetchUser if needed
+          phone: (authUser as any).phone,
+          address: (authUser as any).address,
+          is_active: true,
+          email_verified: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
         set({
           token,
           authUser,
+          user: fullUser,
           isAuthenticated: true,
         });
       },
@@ -99,6 +116,28 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         authUser: state.authUser,
       }),
+      onRehydrateStorage: () => (state) => {
+        // After rehydration, if we have authUser but no user, create the user object
+        if (state && state.authUser && !state.user) {
+          const authUser = state.authUser;
+          const fullUser: User = {
+            _id: authUser.id,
+            name: authUser.name,
+            email: authUser.email,
+            role: authUser.role,
+            company_name: (authUser as any).company_name,
+            gstin: '',
+            phone: (authUser as any).phone,
+            address: (authUser as any).address,
+            is_active: true,
+            email_verified: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          state.user = fullUser;
+          state.isAuthenticated = true;
+        }
+      },
     }
   )
 );

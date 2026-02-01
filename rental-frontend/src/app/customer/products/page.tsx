@@ -3,8 +3,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import CustomerDashboardLayout from '@/components/layout/CustomerDashboardLayout';
 import ProductCard from '@/components/products/ProductCard';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -33,44 +32,7 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Browse Products
-          </h1>
-          <p className="text-foreground-secondary">
-            Find the perfect equipment for your needs
-          </p>
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="md:col-span-2 relative">
-            <Search 
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-secondary" 
-              size={20} 
-            />
-            <Input
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <Select
-            options={[
-              { value: '', label: 'All Categories' },
-              ...categories.map((cat) => ({ value: cat!, label: cat! })),
-            ]}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          />
-        </div>
-
+    <CustomerDashboardLayout>
         {/* Products Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -93,9 +55,6 @@ export default function ProductsPage() {
             ))}
           </div>
         )}
-      </main>
-
-      <Footer />
-    </div>
+      </CustomerDashboardLayout>
   );
 }
