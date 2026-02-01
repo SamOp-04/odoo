@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Heart, ShoppingCart, User, Menu } from 'lucide-react';
@@ -11,10 +11,15 @@ import { useCartStore } from '@/store/cart/cartStore';
 
 const CustomerNavbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { getItemCount } = useCartStore();
-  const cartCount = getItemCount();
+  const cartCount = mounted ? getItemCount() : 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navigation = [
     { name: 'Products', href: '/customer/products' },

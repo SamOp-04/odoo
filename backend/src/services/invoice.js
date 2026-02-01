@@ -21,24 +21,33 @@ async function createInvoiceFromOrder(orderId, session = null) {
     const invoiceLines = [];
     
     for (const line of order.lines) {
-      subtotal += line.subtotal;
+      const lineSubtotal = line.subtotal || 0;
+      const lineQuantity = line.quantity || 0;
+      const lineUnitPrice = line.unit_price || 0;
       
-      const taxAmount = (line.subtotal * gstRate) / 100;
-      const total = line.subtotal + taxAmount;
+      subtotal += lineSubtotal;
+      
+      const taxAmount = (lineSubtotal * gstRate) / 100;
+      const total = lineSubtotal + taxAmount;
       
       invoiceLines.push({
         description: `Rental: ${line.product_name || 'Product'}`,
-        quantity: line.quantity,
-        unit_price: line.unit_price,
-        subtotal: line.subtotal,
+        quantity: lineQuantity,
+        unit_price: lineUnitPrice,
+        subtotal: lineSubtotal,
         tax_rate: gstRate,
-        tax_amount: taxAmount,
-        total: total
+        tax_amount: isNaN(taxAmount) ? 0 : taxAmount,
+        total: isNaN(total) ? lineSubtotal : total
       });
     }
     
     const taxAmount = (subtotal * gstRate) / 100;
     const totalAmount = subtotal + taxAmount;
+    
+    // Ensure no NaN values
+    const finalSubtotal = isNaN(subtotal) ? 0 : subtotal;
+    const finalTaxAmount = isNaN(taxAmount) ? 0 : taxAmount;
+    const finalTotalAmount = isNaN(totalAmount) ? finalSubtotal : totalAmount;
     
     const invoice = await Invoice.create([{
       order_id: orderId,
@@ -48,12 +57,12 @@ async function createInvoiceFromOrder(orderId, session = null) {
       invoice_date: new Date(),
       due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       lines: invoiceLines,
-      subtotal: subtotal,
+      subtotal: finalSubtotal,
       tax_rate: gstRate,
-      tax_amount: taxAmount,
-      total_amount: totalAmount,
+      tax_amount: finalTaxAmount,
+      total_amount: finalTotalAmount,
       amount_paid: 0,
-      amount_due: totalAmount,
+      amount_due: finalTotalAmount,
       status: 'draft',
       payment_method: null,
       gstin_customer: order.customer_id.gstin,

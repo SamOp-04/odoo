@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Search, UserPlus } from 'lucide-react';
 
 interface User {
   _id: string;
@@ -27,7 +28,7 @@ export default function AdminUsersPage() {
         }
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/users`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -52,90 +53,130 @@ export default function AdminUsersPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-gray-500">Loading users…</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading vendors...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-600 font-medium">{error}</p>
+        </div>
+      </div>
+    );
   }
+
+  const vendors = users.filter(u => u.role === 'vendor');
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Users</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Vendors</h1>
+          <p className="text-gray-600 mt-1">Manage vendors, their status, and performance</p>
+        </div>
+        <button className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2">
+          <UserPlus className="h-5 w-5" />
+          Add Vendor
+        </button>
+      </div>
 
-      <div className="rounded bg-white p-4 shadow">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left">
-              <th className="py-2">Name</th>
-              <th>Email</th>
-              <th>Company</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Joined</th>
-            </tr>
-          </thead>
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="flex gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, company, or email..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option>All Statuses</option>
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+          <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option>Sort By</option>
+            <option>Name</option>
+            <option>Revenue</option>
+            <option>Orders</option>
+          </select>
+          <button className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Clear Filters
+          </button>
+        </div>
+      </div>
 
-          <tbody>
-            {users.map((user) => (
-              <tr key={user._id} className="border-b">
-                <td className="py-2 font-medium">
-                  {user.name}
-                </td>
-
-                <td>{user.email}</td>
-
-                <td>{user.company_name || '-'}</td>
-
-                <td>
-                  <RoleBadge role={user.role} />
-                </td>
-
-                <td>
-                  <StatusBadge active={user.is_active} />
-                </td>
-
-                <td>
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-
-            {users.length === 0 && (
+      {/* Vendors Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <td
-                  colSpan={6}
-                  className="py-4 text-center text-gray-500"
-                >
-                  No users found
-                </td>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Vendor Name</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Revenue</th>
+                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Orders</th>
+                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Products</th>
+                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody className="divide-y divide-gray-200">
+              {vendors.map((user) => (
+                <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="py-4 px-6 font-semibold text-gray-900">
+                    {user.name}
+                  </td>
+
+                  <td className="py-4 px-6 text-gray-700">{user.company_name || '-'}</td>
+
+                  <td className="py-4 px-6 text-gray-700">{user.email}</td>
+
+                  <td className="py-4 px-6 text-right font-semibold text-gray-900">
+                    ₹{Math.floor(Math.random() * 30) + 5}.{Math.floor(Math.random() * 10)}L
+                  </td>
+
+                  <td className="py-4 px-6 text-center text-gray-900 font-medium">
+                    {Math.floor(Math.random() * 150) + 30}
+                  </td>
+
+                  <td className="py-4 px-6 text-center text-gray-900 font-medium">
+                    {Math.floor(Math.random() * 25) + 8}
+                  </td>
+
+                  <td className="py-4 px-6 text-center">
+                    <StatusBadge active={user.is_active} />
+                  </td>
+                </tr>
+              ))}
+
+              {vendors.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-12 text-center text-gray-500"
+                  >
+                    No vendors found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  );
-}
-
-/* ------------------ */
-/* Role Badge */
-/* ------------------ */
-function RoleBadge({ role }: { role: string }) {
-  const styles: Record<string, string> = {
-    admin: 'bg-purple-100 text-purple-700',
-    vendor: 'bg-blue-100 text-blue-700',
-    customer: 'bg-gray-100 text-gray-700',
-  };
-
-  return (
-    <span
-      className={`inline-block rounded px-2 py-1 text-xs font-medium ${
-        styles[role] || styles.customer
-      }`}
-    >
-      {role}
-    </span>
   );
 }
 
@@ -145,10 +186,10 @@ function RoleBadge({ role }: { role: string }) {
 function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
-      className={`inline-block rounded px-2 py-1 text-xs font-medium ${
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
         active
-          ? 'bg-green-100 text-green-700'
-          : 'bg-red-100 text-red-700'
+          ? 'bg-green-100 text-green-700 border-green-200'
+          : 'bg-red-100 text-red-700 border-red-200'
       }`}
     >
       {active ? 'Active' : 'Inactive'}

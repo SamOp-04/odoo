@@ -12,11 +12,16 @@ import Button from '@/components/ui/Button';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
   const { getItemCount } = useCartStore();
-  const cartCount = getItemCount();
+  const cartCount = mounted ? getItemCount() : 0;
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();

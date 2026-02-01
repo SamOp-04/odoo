@@ -53,6 +53,126 @@ const getOrderById = async (req, res) => {
   }
 };
 
+const createOrder = async (req, res) => {
+  try {
+    const { vendor_id, lines, delivery_method, delivery_address, notes } = req.body;
+    
+    if (!lines || lines.length === 0) {
+      return res.status(400).json({ error: 'Order must have at least one item' });
+    }
+    
+    let totalAmount = 0;
+    let depositAmount = 0;
+    const processedLines = [];
+    
+    // Process each line and fetch product details
+    for (const line of lines) {
+      const Product = require('../models/Product');
+      const product = await Product.findById(line.product_id);
+      
+      if (!product) {
+        return res.status(404).json({ error: `Product ${line.product_id} not found` });
+      }
+      
+      const lineTotal = line.subtotal || (line.unit_price * line.quantity);
+      totalAmount += lineTotal;
+      
+      // Calculate deposit (assuming security_deposit from product)
+      const depositPerItem = product.security_deposit || 0;
+      depositAmount += depositPerItem * line.quantity;
+      
+      processedLines.push({
+        product_id: line.product_id,
+        product_name: product.name,
+        variant_id: line.variant_id,
+        quantity: line.quantity,
+        rental_start_date: line.rental_start_date,
+        rental_end_date: line.rental_end_date,
+        unit_price: line.unit_price,
+        subtotal: lineTotal,
+        product_image: product.images && product.images.length > 0 ? product.images[0] : null,
+        product_images: product.images || []
+      });
+    }
+    
+    // Generate order number
+    const orderNumber = `SO${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    
+    // Create the order
+    const order = await RentalOrder.create({
+      customer_id: req.user.id,
+      vendor_id: vendor_id,
+      order_number: orderNumber,
+      status: 'confirmed',
+      lines: processedLines,
+      total_amount: totalAmount,
+      deposit_paid: depositAmount,
+      full_payment_made: true,
+      payment_status: 'paid',
+      notes: notes || ''
+    });
+    
+    // Create invoice for the order
+    const Invoice = require('../models/Invoice');
+    const invoiceNumber = `INV${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    
+    const taxRate = 0; // No tax for now, can be changed later
+    const invoiceSubtotal = totalAmount;
+    const invoiceTaxAmount = invoiceSubtotal * (taxRate / 100);
+    const invoiceTotalAmount = invoiceSubtotal + invoiceTaxAmount + depositAmount;
+    
+    await Invoice.create({
+      invoice_number: invoiceNumber,
+      order_id: order._id,
+      customer_id: req.user.id,
+      vendor_id: vendor_id,
+      invoice_date: new Date(),
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      status: 'paid',
+      lines: processedLines.map(line => {
+        const lineSubtotal = line.subtotal || 0;
+        const lineTaxAmount = lineSubtotal * (taxRate / 100);
+        const lineTotal = lineSubtotal + lineTaxAmount;
+        
+        return {
+          description: line.product_name,
+          quantity: line.quantity || 0,
+          unit_price: line.unit_price || 0,
+          subtotal: lineSubtotal,
+          tax_rate: taxRate,
+          tax_amount: lineTaxAmount,
+          total: lineTotal
+        };
+      }),
+      subtotal: invoiceSubtotal,
+      tax_rate: taxRate,
+      tax_amount: invoiceTaxAmount,
+      total_amount: invoiceTotalAmount,
+      amount_paid: invoiceTotalAmount,
+      amount_due: 0
+    });
+    
+    // Create notification for vendor
+    await createNotification(
+      vendor_id,
+      'new_order',
+      'New Order Received',
+      `You have received a new order ${orderNumber}`
+    );
+    
+    // Populate and return the order
+    const populatedOrder = await RentalOrder.findById(order._id)
+      .populate('customer_id', 'name email')
+      .populate('vendor_id', 'name email')
+      .populate('lines.product_id');
+    
+    res.status(201).json(populatedOrder);
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const markAsPickedUp = async (req, res) => {
   try {
     const order = await RentalOrder.findById(req.params.id);
@@ -305,6 +425,7 @@ const uploadReturnImages = async (req, res) => {
 module.exports = {
   getOrders,
   getOrderById,
+  createOrder,
   markAsPickedUp,
   markAsReturned,
   cancelOrder,

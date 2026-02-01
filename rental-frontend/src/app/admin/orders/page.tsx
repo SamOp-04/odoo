@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 
 interface User {
   name: string;
@@ -39,7 +40,7 @@ export default function AdminOrdersPage() {
         }
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/orders`,
+          `${process.env.NEXT_PUBLIC_API_URL}/orders`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -64,71 +65,121 @@ export default function AdminOrdersPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-gray-500">Loading orders…</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading orders...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-600 font-medium">{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Orders</h1>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
+        <p className="text-gray-600 mt-1">System-wide order management</p>
+      </div>
 
-      <div className="rounded bg-white p-4 shadow">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left">
-              <th className="py-2">Order</th>
-              <th>Customer</th>
-              <th>Vendor</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order._id} className="border-b">
-                <td className="py-2 font-medium">
-                  {order.order_number}
-                </td>
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="flex gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by order ID, customer, or vendor..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option>All Statuses</option>
+            <option>Confirmed</option>
+            <option>With Customer</option>
+            <option>Returned</option>
+            <option>Cancelled</option>
+          </select>
+          <button className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Clear Filters
+          </button>
+        </div>
+      </div>
 
-                <td>
-                  {order.customer_id?.company_name ||
-                    order.customer_id?.name ||
-                    '-'}
-                </td>
-
-                <td>
-                  {order.vendor_id?.company_name ||
-                    order.vendor_id?.name ||
-                    '-'}
-                </td>
-
-                <td>
-                  <StatusBadge status={order.status} />
-                </td>
-
-                <td>
-                  ₹{order.total_amount.toLocaleString()}
-                </td>
-
-                <td>
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-
-            {orders.length === 0 && (
+      {/* Orders Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <td colSpan={6} className="py-4 text-center text-gray-500">
-                  No orders found
-                </td>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Order ID</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Vendor</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Rental Period</th>
+                <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Amount</th>
+                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {orders.map((order) => (
+                <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="py-4 px-6 font-semibold text-gray-900">
+                    {order.order_number}
+                  </td>
+
+                  <td className="py-4 px-6 text-gray-700">
+                    {order.vendor_id?.company_name ||
+                      order.vendor_id?.name ||
+                      '-'}
+                  </td>
+
+                  <td className="py-4 px-6 text-gray-700">
+                    {order.customer_id?.company_name ||
+                      order.customer_id?.name ||
+                      '-'}
+                  </td>
+
+                  <td className="py-4 px-6 text-gray-700 text-sm">
+                    {new Date(order.createdAt).toLocaleString('en-IN', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </td>
+
+                  <td className="py-4 px-6 text-right font-semibold text-gray-900">
+                    ₹{order.total_amount.toLocaleString('en-IN')}
+                  </td>
+
+                  <td className="py-4 px-6 text-center">
+                    <StatusBadge status={order.status} />
+                  </td>
+                </tr>
+              ))}
+
+              {orders.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-gray-500">
+                    No orders found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -139,19 +190,19 @@ export default function AdminOrdersPage() {
 /* ------------------ */
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    confirmed: 'bg-blue-100 text-blue-700',
-    with_customer: 'bg-yellow-100 text-yellow-700',
-    returned: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-700',
+    confirmed: 'bg-orange-100 text-orange-700 border-orange-200',
+    with_customer: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    returned: 'bg-green-100 text-green-700 border-green-200',
+    cancelled: 'bg-red-100 text-red-700 border-red-200',
   };
 
   return (
     <span
-      className={`inline-block rounded px-2 py-1 text-xs font-medium ${
-        colors[status] || 'bg-gray-100 text-gray-700'
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+        colors[status] || 'bg-gray-100 text-gray-700 border-gray-200'
       }`}
     >
-      {status.replace('_', ' ')}
+      {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
     </span>
   );
 }

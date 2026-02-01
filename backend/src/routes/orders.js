@@ -4,6 +4,7 @@ const multer = require('multer');
 const {
   getOrders,
   getOrderById,
+  createOrder,
   markAsPickedUp,
   markAsReturned,
   cancelOrder,
@@ -39,6 +40,7 @@ const upload = multer({
 // Basic order routes
 router.get('/', authenticateToken, getOrders);
 router.get('/:id', authenticateToken, getOrderById);
+router.post('/', authenticateToken, authorize('customer', 'admin'), createOrder);
 
 // Pickup/return with optional image upload
 router.patch(

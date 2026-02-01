@@ -26,12 +26,14 @@ type CheckoutStep = 'delivery' | 'payment' | 'confirmation';
 export default function CheckoutPage() {
   useRequireAuth();
   const router = useRouter();
-  const { items, getTotalAmount, getTotalDeposit, clearCart } = useCartStore();
+  const { items, getTotalAmount, getTotalDeposit, clearCart, quotationId } = useCartStore();
 
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('delivery');
   const [deliveryMethod, setDeliveryMethod] = useState<'standard' | 'pickup'>('standard');
   const [sameAsBilling, setSameAsBilling] = useState(false);
   const [savePaymentDetails, setSavePaymentDetails] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
   // Mock customer data
   const customerData = {
@@ -61,15 +63,65 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (currentStep === 'delivery') {
       setCurrentStep('payment');
     } else if (currentStep === 'payment') {
-      // Process payment and show confirmation
-      setCurrentStep('confirmation');
-      // Generate mock order number
-      const orderNumber = 'SO' + Math.floor(100000 + Math.random() * 900000);
-      sessionStorage.setItem('lastOrderNumber', orderNumber);
+      // Process payment and confirm quotation
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please login to place order');
+          router.push('/auth/login');
+          return;
+        }
+
+        if (!quotationId) {
+          alert('No quotation found. Please add items to cart.');
+          return;
+        }
+
+        // Confirm the quotation (this will create the order)
+        const confirmRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/quotations/${quotationId}/confirm`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              delivery_method: deliveryMethod,
+              delivery_address: formData.address || 'Customer Address',
+              payment_method: 'card',
+            }),
+          }
+        );
+
+        if (!confirmRes.ok) {
+          const errorData = await confirmRes.json();
+          throw new Error(errorData.error || 'Failed to confirm order');
+        }
+
+        const result = await confirmRes.json();
+        const order = result.order;
+        
+        // Store order details
+        setCreatedOrderId(order._id);
+        sessionStorage.setItem('lastOrderNumber', order.order_number);
+        sessionStorage.setItem('lastOrderId', order._id);
+
+        // Clear cart after successful order
+        clearCart();
+        
+        setCurrentStep('confirmation');
+      } catch (error: any) {
+        console.error('Error confirming order:', error);
+        alert(error.message || 'Failed to place order. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -242,8 +294,8 @@ export default function CheckoutPage() {
       </Card>
 
       <div className="flex flex-col gap-3">
-        <Button fullWidth size="lg" onClick={handleConfirm}>
-          Confirmed {'>'}
+        <Button fullWidth size="lg" onClick={handleConfirm} disabled={loading}>
+          {loading ? 'Processing...' : 'Confirmed >'}
         </Button>
         <div className="text-center">
           <span className="text-foreground-secondary">OR</span>
@@ -314,8 +366,8 @@ export default function CheckoutPage() {
       </Card>
 
       <div className="flex flex-col gap-3">
-        <Button fullWidth size="lg" onClick={handleConfirm}>
-          Pay Now
+        <Button fullWidth size="lg" onClick={handleConfirm} disabled={loading}>
+          {loading ? 'Processing Payment...' : 'Pay Now'}
         </Button>
         <div className="text-center">
           <span className="text-foreground-secondary">OR</span>
@@ -334,6 +386,71 @@ export default function CheckoutPage() {
   // Confirmation Step
   const ConfirmationStep = () => {
     const orderNumber = sessionStorage.getItem('lastOrderNumber') || 'SO000010';
+    const orderId = sessionStorage.getItem('lastOrderId');
+
+    const handlePrintInvoice = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please login to view invoice');
+          return;
+        }
+
+        // If we have the order ID from the recent order, get invoices for that order
+        if (orderId || createdOrderId) {
+          const invoicesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!invoicesRes.ok) {
+            throw new Error('Failed to fetch invoices');
+          }
+
+          const invoices = await invoicesRes.json();
+          
+          // Find invoice for this specific order
+          const orderInvoice = invoices.find((inv: any) => 
+            inv.order_id && inv.order_id.toString() === (createdOrderId || orderId)
+          );
+          
+          // Fallback to most recent invoice if not found
+          const targetInvoice = orderInvoice || invoices.sort((a: any, b: any) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0];
+
+          if (!targetInvoice) {
+            alert('No invoice found for this order');
+            return;
+          }
+
+          // Download the invoice PDF
+          const downloadRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/invoices/${targetInvoice._id}/download`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (!downloadRes.ok) {
+            throw new Error('Failed to download invoice');
+          }
+
+          const { pdf_url } = await downloadRes.json();
+          
+          // Open PDF in new tab
+          window.open(pdf_url, '_blank');
+        } else {
+          alert('Order information not found');
+        }
+      } catch (error) {
+        console.error('Error printing invoice:', error);
+        alert('Failed to open invoice. Please try again.');
+      }
+    };
 
     return (
       <CustomerDashboardLayout>
@@ -346,7 +463,7 @@ export default function CheckoutPage() {
                 </h1>
                 <p className="text-foreground-secondary">Order {orderNumber}</p>
               </div>
-              <Button variant="outline">Print</Button>
+              <Button variant="outline" onClick={handlePrintInvoice}>Print</Button>
             </div>
 
             <div className="bg-green-600 text-white p-4 rounded-lg mb-8">
